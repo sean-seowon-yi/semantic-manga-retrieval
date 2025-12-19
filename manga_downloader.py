@@ -230,24 +230,30 @@ def save_manga_metadata(manga_dir: Path, manga: dict) -> None:
     print(f"📄 Metadata saved to: {metadata_file}")
 
 
-def get_chapter_pages(chapter_id: str) -> dict | None:
+def get_chapter_pages(chapter_id: str, quiet: bool = False) -> dict | None:
     """
     Get page information for a chapter.
     Returns server data with base_url, hash, and page list.
     """
-    resp = requests.get(PAGE_URL + chapter_id, headers=HEADERS)
-    server_data = resp.json()
-    
-    if server_data.get("result") == "error":
-        print(f"Error: Could not get chapter data")
+    try:
+        resp = requests.get(PAGE_URL + chapter_id, headers=HEADERS)
+        server_data = resp.json()
+        
+        if server_data.get("result") == "error":
+            if not quiet:
+                print(f"Error: Could not get chapter data")
+            return None
+        
+        return {
+            "base_url": server_data["baseUrl"],
+            "hash": server_data["chapter"]["hash"],
+            "pages": server_data["chapter"]["data"],
+            "total": len(server_data["chapter"]["data"])
+        }
+    except Exception as e:
+        if not quiet:
+            print(f"Error fetching chapter: {e}")
         return None
-    
-    return {
-        "base_url": server_data["baseUrl"],
-        "hash": server_data["chapter"]["hash"],
-        "pages": server_data["chapter"]["data"],
-        "total": len(server_data["chapter"]["data"])
-    }
 
 
 def select_pages_to_download(total_pages: int) -> list[int] | None:

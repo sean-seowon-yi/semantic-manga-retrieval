@@ -1,3 +1,12 @@
+"""
+CLIP Embedding Extractor for Manga Images
+
+This module provides functions to:
+- Load CLIP model
+- Extract L2-normalized embeddings from images
+- Parse metadata from image paths
+"""
+
 import torch
 import open_clip
 from PIL import Image
@@ -6,31 +15,122 @@ import numpy as np
 from sklearn.cluster import KMeans
 from tqdm import tqdm
 import json
+import re
 
 
-def get_device():
-    """Get the best available device: mps, cuda, or cpu."""
-    if torch.backends.mps.is_available():
-        return "mps"
-    elif torch.cuda.is_available():
+def get_device(prefer_cpu: bool = False):
+    """
+    Get the best available device: cuda, mps, or cpu.
+    
+    Args:
+        prefer_cpu: If True, always use CPU (safer for compatibility)
+    """
+    if prefer_cpu:
+        return "cpu"
+    
+    if torch.cuda.is_available():
         return "cuda"
+    # MPS can cause segfaults with some models, so we default to CPU
+    # Uncomment below to try MPS if you want:
+    # elif torch.backends.mps.is_available():
+    #     return "mps"
     else:
         return "cpu"
 
 
-def get_all_images(downloads_dir: Path) -> list[Path]:
-    """Recursively find all images in the downloads directory."""
+def load_clip_model(device: str = None, prefer_cpu: bool = False):
+    """
+    Load CLIP model and preprocessing function.
+    
+    Args:
+        device: Specific device to use (overrides auto-detection)
+        prefer_cpu: If True, use CPU for better compatibility
+    
+    Returns:
+        tuple: (model, preprocess, device)
+    """
+    if device is None:
+        device = get_device(prefer_cpu=prefer_cpu)
+    
+    print(f"Loading CLIP model on {device}...")
+    model, preprocess, _ = open_clip.create_model_and_transforms(
+        "ViT-L-14",
+        pretrained="laion2b_s32b_b82k",
+    )
+    model = model.to(device).eval()
+    
+    return model, preprocess, device
+
+
+def get_all_images(image_dir: Path) -> list[Path]:
+    """Recursively find all images in a directory."""
     image_extensions = {".png", ".jpg", ".jpeg", ".webp"}
     images = []
     for ext in image_extensions:
-        images.extend(downloads_dir.rglob(f"*{ext}"))
+        images.extend(image_dir.rglob(f"*{ext}"))
     return sorted(images)
 
 
+def parse_image_metadata(path: Path) -> dict:
+    """
+    Parse metadata from image path.
+    Expected structure: .../author/manga/chapter_X/page_XXX.ext
+    
+    Returns:
+        dict with author, manga, chapter, page, string_id
+    """
+    parts = path.parts
+    
+    # Extract components from path
+    page_name = path.stem  # e.g., "page_013"
+    chapter_dir = parts[-2] if len(parts) >= 2 else "unknown"  # e.g., "chapter_11"
+    manga = parts[-3] if len(parts) >= 3 else "unknown"
+    author = parts[-4] if len(parts) >= 4 else "unknown"
+    
+    # Extract page number
+    page_match = re.search(r'(\d+)', page_name)
+    page_num = page_match.group(1) if page_match else "000"
+    
+    # Extract chapter number
+    chapter_match = re.search(r'(\d+)', chapter_dir)
+    chapter_num = chapter_match.group(1) if chapter_match else "0"
+    
+    # Create a clean string ID
+    # Format: author__manga__chapterXX__pageXXX
+    clean_author = re.sub(r'[^a-zA-Z0-9]', '_', author).strip('_')
+    clean_manga = re.sub(r'[^a-zA-Z0-9]', '_', manga).strip('_')
+    string_id = f"{clean_author}__{clean_manga}__ch{chapter_num}__pg{page_num}"
+    
+    return {
+        "author": author,
+        "manga": manga,
+        "chapter": chapter_dir,
+        "chapter_num": int(chapter_num) if chapter_num.isdigit() else 0,
+        "page": page_name,
+        "page_num": int(page_num) if page_num.isdigit() else 0,
+        "path": str(path),
+        "string_id": string_id,
+    }
+
+
 def extract_embeddings(
-    model, preprocess, device: str, image_paths: list[Path], batch_size: int = 16
+    model, preprocess, device: str, image_paths: list[Path], batch_size: int = 16,
+    normalize: bool = True
 ) -> tuple[np.ndarray, list[Path]]:
-    """Extract CLIP embeddings for all images."""
+    """
+    Extract CLIP embeddings for all images.
+    
+    Args:
+        model: CLIP model
+        preprocess: Image preprocessing function
+        device: Device to run on
+        image_paths: List of image paths
+        batch_size: Batch size for processing
+        normalize: If True, L2 normalize embeddings (for cosine similarity)
+    
+    Returns:
+        tuple: (embeddings array, valid paths list)
+    """
     embeddings = []
     valid_paths = []
 
@@ -54,14 +154,18 @@ def extract_embeddings(
 
         with torch.no_grad():
             batch_embeddings = model.encode_image(batch_tensor)
-            batch_embeddings = batch_embeddings / batch_embeddings.norm(
-                dim=-1, keepdim=True
-            )
+            
+            if normalize:
+                # L2 normalize for cosine similarity
+                batch_embeddings = batch_embeddings / batch_embeddings.norm(
+                    dim=-1, keepdim=True
+                )
+            
             embeddings.append(batch_embeddings.cpu().numpy())
 
     if embeddings:
-        return np.vstack(embeddings), valid_paths
-    return np.array([]), []
+        return np.vstack(embeddings).astype(np.float32), valid_paths
+    return np.array([]).astype(np.float32), []
 
 
 def cluster_embeddings(
