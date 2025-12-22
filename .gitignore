@@ -18,3 +18,22 @@ downloads/
 .DS_Store
 Thumbs.db
 
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.bmp
+*.tiff
+*.ico
+*.webp
+*.svg
+*.pdf
+*.docx
+
+*.json
+
+*.npy
+
+*.html
+*.txt
+*.index
