@@ -6,7 +6,7 @@ Evaluates recall@k for query images using FAISS index.
 Processes query folders with query images and labels.txt files.
 
 Sample Execution:
-    python metrics/recall_image.py --index index/image --queries query/image --output results/recall_image
+    python evaluate/recall_image.py --index index/image --queries query/image --output results/recall_image
 """
 
 import argparse
