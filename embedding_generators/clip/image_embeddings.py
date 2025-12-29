@@ -6,9 +6,9 @@ Generates CLIP image embeddings from manga images.
 Preserves folder structure: input_folder/manga/chapter/image.png -> input_folder_embeddings/manga/chapter/image.npy
 
 Usage:
-    python clip/image_embeddings.py final_dataset
-    python clip/image_embeddings.py final_dataset --output-dir custom_embeddings
-    python clip/image_embeddings.py final_dataset --batch-size 32
+    python legacy/clip/image_embeddings.py final_dataset
+    python legacy/clip/image_embeddings.py final_dataset --output-dir custom_embeddings
+    python legacy/clip/image_embeddings.py final_dataset --batch-size 32
 """
 
 import argparse

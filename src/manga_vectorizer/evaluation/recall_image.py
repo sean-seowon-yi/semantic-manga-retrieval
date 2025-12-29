@@ -6,7 +6,7 @@ Evaluates recall@k for query images using FAISS index.
 Processes query folders with query images and labels.txt files.
 
 Usage:
-    python -m evaluate.recall_image --index index/image --queries query/image --output results/recall_image
+    python -m manga_vectorizer.evaluation.recall_image --index ../final_dataset_embeddings/faiss_index --queries ../queries --output results/recall_image_test
 """
 
 import argparse
@@ -22,8 +22,8 @@ from PIL import Image
 import torch
 import open_clip
 
-# Import utility functions (handles sys.path setup)
-from evaluate.recall_utils import (
+# Import utility functions
+from manga_vectorizer.evaluation.utils import (
     get_device,
     check_faiss_available,
     load_faiss_index,

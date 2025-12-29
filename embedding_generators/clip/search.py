@@ -5,10 +5,10 @@ Manga Panel Similarity Search
 Search for similar manga panels using CLIP embeddings and FAISS.
 
 Usage:
-    python clip/search.py path/to/query/image.png
-    python clip/search.py path/to/image.png --k 10
-    python clip/search.py path/to/image.png --visualize
-    python clip/search.py path/to/image.png --index-dir datasets/medium/faiss_index
+    python legacy/clip/search.py path/to/query/image.png
+    python legacy/clip/search.py path/to/image.png --k 10
+    python legacy/clip/search.py path/to/image.png --visualize
+    python legacy/clip/search.py path/to/image.png --index-dir datasets/medium/faiss_index
 """
 
 import os

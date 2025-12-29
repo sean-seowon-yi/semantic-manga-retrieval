@@ -22,13 +22,26 @@ import time
 from pathlib import Path
 from dataclasses import dataclass, field
 
-# Import from manga_downloader
-from manga_downloader import (
-    BASE_URL,
-    MANGA_URL,
-    HEADERS,
-    get_chapter_pages,
-)
+# Import from download_manga (same directory)
+# When running as a script, use direct import
+try:
+    from download_manga import (
+        BASE_URL,
+        MANGA_URL,
+        HEADERS,
+        get_chapter_pages,
+    )
+except ImportError:
+    # Fallback for when running from repo root
+    import sys
+    from pathlib import Path
+    sys.path.insert(0, str(Path(__file__).parent))
+    from download_manga import (
+        BASE_URL,
+        MANGA_URL,
+        HEADERS,
+        get_chapter_pages,
+    )
 
 
 # ============================================================================
@@ -261,15 +274,15 @@ def fetch_author_works(author_id: str) -> tuple[str, list[dict]]:
 
 def search_manga_api(config: dict, retries: int = 2) -> list[dict]:
     """Execute a single manga search API call with retry logic."""
-        params = {
+    params = {
         "limit": 50,
-            "includes[]": ["author"],
-            "availableTranslatedLanguage[]": ["en"],
-            "hasAvailableChapters": "true",
-            "contentRating[]": ["safe", "suggestive"],
-            **config
-        }
-        
+        "includes[]": ["author"],
+        "availableTranslatedLanguage[]": ["en"],
+        "hasAvailableChapters": "true",
+        "contentRating[]": ["safe", "suggestive"],
+        **config
+    }
+    
     for attempt in range(retries + 1):
         try:
             resp = requests.get(MANGA_URL, params=params, headers=HEADERS, timeout=30)

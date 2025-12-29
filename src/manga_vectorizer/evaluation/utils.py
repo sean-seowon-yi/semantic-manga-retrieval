@@ -60,7 +60,7 @@ def get_device(prefer_cpu: bool = False) -> str:
         return "cuda"
     elif torch.backends.mps.is_available():
         return "mps"
-    return "cpu"
+        return "cpu"
 
 
 def check_faiss_available() -> bool:
@@ -904,7 +904,7 @@ def plot_recall_curve(result: Dict, output_path: Path, color: str = 'blue', titl
         ax1.legend(loc='lower right', fontsize=10, framealpha=0.9)
         ax1.spines['top'].set_visible(False)
         ax1.spines['right'].set_visible(False)
-        
+    
         # Add value labels on actual data points (skip k=0)
         for k, recall in zip(actual_k, actual_scores):
             ax1.annotate(f'{recall:.3f}', (k, recall),

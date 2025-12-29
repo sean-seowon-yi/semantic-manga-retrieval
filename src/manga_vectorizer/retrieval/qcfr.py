@@ -69,6 +69,42 @@ def build_page_to_text_indices(text_id_to_meta: Dict, get_page_key_fn) -> Dict[s
     return page_to_text_indices
 
 
+def build_page_to_faiss_mapping(image_id_to_meta: Dict, get_page_key_fn=None) -> Dict[str, int]:
+    """
+    Build mapping from page_key to FAISS index for images.
+    
+    Args:
+        image_id_to_meta: Mapping from FAISS index -> image metadata
+        get_page_key_fn: Optional function to extract page key from metadata.
+                        If None, uses the default get_page_key logic.
+    
+    Returns:
+        Dict mapping page_key -> FAISS index
+    """
+    page_to_faiss_idx = {}
+    
+    for idx, meta in image_id_to_meta.items():
+        if get_page_key_fn:
+            page_key = get_page_key_fn(meta)
+        else:
+            # Default page key extraction logic
+            if isinstance(meta, dict):
+                if 'page_key' in meta:
+                    page_key = meta['page_key']
+                elif 'source_file' in meta:
+                    page_key = meta['source_file']
+                elif 'artist' in meta and 'manga' in meta and 'chapter' in meta and 'page' in meta:
+                    page_key = f"{meta['artist']}/{meta['manga']}/{meta['chapter']}/{meta['page']}"
+                else:
+                    page_key = str(idx)
+            else:
+                page_key = str(meta)
+        
+        page_to_faiss_idx[page_key] = idx
+    
+    return page_to_faiss_idx
+
+
 def compute_true_max_text_score(
     page_key: str,
     query_text_embedding: np.ndarray,
@@ -372,7 +408,7 @@ def qcfr_search(
         Dict with search results and intermediate data
     """
     import faiss
-    from late_fusion.faiss_search import search_index, get_page_key
+    from manga_vectorizer.core.faiss_search import search_index, get_page_key
     
     # Infer embedding dimension from query
     embedding_dim = query_image_embedding.shape[-1]
@@ -427,8 +463,7 @@ def qcfr_search(
         print("\n[2/6] Computing hybrid scores...")
     
     # Build page_to_faiss_idx mapping for images
-    from intervention.transform import build_page_to_faiss_mapping
-    page_to_faiss_idx = build_page_to_faiss_mapping(image_id_to_meta)
+    page_to_faiss_idx = build_page_to_faiss_mapping(image_id_to_meta, get_page_key)
     
     # Build page_to_text_indices mapping for true max-pooling
     page_to_text_indices = None
@@ -642,9 +677,9 @@ def qcfr_search_with_description(
     Returns:
         Dict with all results and intermediate data
     """
-    from late_fusion.llm_encoder import encode_query_llm
-    from late_fusion.clip_encoder import load_clip_model, encode_image, encode_text
-    from evaluate.recall_utils import load_faiss_index_direct
+    from manga_vectorizer.core.llm_encoder import encode_query_llm
+    from manga_vectorizer.core.clip_encoder import load_clip_model, encode_image, encode_text
+    from manga_vectorizer.evaluation.utils import load_faiss_index_direct
     
     # Step 1: Generate or use cached LLM description
     if cached_description is not None:

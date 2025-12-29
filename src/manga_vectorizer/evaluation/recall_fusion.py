@@ -7,18 +7,18 @@ Supports grid search over multiple alpha and m values for hyperparameter explora
 
 Usage:
     # Single alpha and m
-    python -m evaluate.recall_fusion --queries queries --mode image --alpha 0.5 --m 50 \\
+    python -m manga_vectorizer.evaluation.recall_fusion --queries ../queries --mode image --alpha 0.5 --m 50 \\
         --image-index indexes/image --text-index indexes/text \\
         --output results/fusion_single
 
     # Grid search over multiple alpha and m values
-    python -m evaluate.recall_fusion --queries queries --mode image \\
+    python -m manga_vectorizer.evaluation.recall_fusion --queries ../queries --mode image \\
         --alphas 0.1 0.2 0.3 0.4 0.5 --m-values 50 60 70 \\
         --image-index indexes/image --text-index indexes/text \\
         --output results/fusion_grid_search
         
     # Use defaults (alpha=0.1-0.5, m=50,60,70)
-    python -m evaluate.recall_fusion --queries queries --mode image \\
+    python -m manga_vectorizer.evaluation.recall_fusion --queries ../queries --mode image \\
         --image-index indexes/image --text-index indexes/text \\
         --output results/fusion_grid_search_image_first
 """
@@ -39,8 +39,8 @@ from PIL import Image
 import torch
 import open_clip
 
-# Import utility functions (handles sys.path setup)
-from evaluate.recall_utils import (
+# Import utility functions
+from manga_vectorizer.evaluation.utils import (
     get_device,
     check_faiss_available,
     load_faiss_index_direct,
@@ -61,9 +61,9 @@ from evaluate.recall_utils import (
     FAISS_AVAILABLE,
 )
 
-# Import late fusion modules
-from late_fusion.faiss_search import get_page_key
-from late_fusion.llm_encoder import encode_query_llm
+# Import core modules
+from manga_vectorizer.core.faiss_search import get_page_key
+from manga_vectorizer.core.llm_encoder import encode_query_llm
 
 
 def late_fusion_one_with_cached_description(
@@ -92,13 +92,13 @@ def late_fusion_one_with_cached_description(
     Image-first late fusion search with cached LLM description.
     Supports pre-computed embeddings for efficiency in grid search.
     """
-    from late_fusion.clip_encoder import load_clip_model, encode_image, encode_text
-    from late_fusion.faiss_search import (
+    from manga_vectorizer.core.clip_encoder import load_clip_model, encode_image, encode_text
+    from manga_vectorizer.core.faiss_search import (
         search_index,
         build_text_lookup,
         compute_text_similarities,
     )
-    from late_fusion.fusion import late_fusion_rerank
+    from manga_vectorizer.core.fusion import late_fusion_rerank
     
     # Step 1: Generate or use cached LLM description
     if cached_description is not None:
@@ -155,7 +155,7 @@ def late_fusion_one_with_cached_description(
     
     # Build text lookup (only if not provided)
     if text_lookup is None:
-        from late_fusion.faiss_search import build_text_lookup
+        from manga_vectorizer.core.faiss_search import build_text_lookup
         text_lookup = build_text_lookup(text_id_to_meta)
         if verbose:
             print(f"  Text lookup: {len(text_lookup)} unique pages")
@@ -226,14 +226,14 @@ def late_fusion_two_with_cached_description(
     Text-first late fusion search with cached LLM description.
     Supports pre-computed embeddings for efficiency in grid search.
     """
-    from late_fusion.clip_encoder import load_clip_model, encode_image, encode_text
-    from late_fusion.faiss_search import (
+    from manga_vectorizer.core.clip_encoder import load_clip_model, encode_image, encode_text
+    from manga_vectorizer.core.faiss_search import (
         search_index,
         build_image_lookup,
         compute_image_similarities,
         deduplicate_text_candidates,
     )
-    from late_fusion.fusion import late_fusion_rerank_two
+    from manga_vectorizer.core.fusion import late_fusion_rerank_two
     
     # Step 1: Generate or use cached LLM description
     if cached_description is not None:
@@ -290,7 +290,7 @@ def late_fusion_two_with_cached_description(
     
     # Build image lookup (only if not provided)
     if image_lookup is None:
-        from late_fusion.faiss_search import build_image_lookup
+        from manga_vectorizer.core.faiss_search import build_image_lookup
         image_lookup = build_image_lookup(image_id_to_meta)
         if verbose:
             print(f"  Image lookup: {len(image_lookup)} unique pages")
@@ -893,7 +893,7 @@ Examples:
     print(f"Text index: {text_index.ntotal} vectors")
     
     # Build lookups once
-    from late_fusion.faiss_search import build_text_lookup, build_image_lookup
+    from manga_vectorizer.core.faiss_search import build_text_lookup, build_image_lookup
     text_lookup = build_text_lookup(text_id_to_meta)
     image_lookup = build_image_lookup(image_id_to_meta)
     print(f"Text lookup: {len(text_lookup)} unique pages")
@@ -913,7 +913,7 @@ Examples:
     
     # Pre-compute embeddings for all queries ONCE (major performance optimization for grid search)
     print(f"\nPre-computing embeddings for {len(query_folders)} queries...")
-    from late_fusion.clip_encoder import encode_image, encode_text
+    from manga_vectorizer.core.clip_encoder import encode_image, encode_text
     
     query_embeddings = {}  # query_folder -> (image_embedding, text_embedding, cached_description, query_image, user_query, ground_truth)
     

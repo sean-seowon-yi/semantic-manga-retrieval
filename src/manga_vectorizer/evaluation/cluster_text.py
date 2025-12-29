@@ -186,7 +186,7 @@ def extract_gender_from_description(text: str) -> str:
     if female_count > male_count:
         return 'female'
     elif male_count > female_count:
-        return 'male'
+            return 'male'
     
     return 'unknown'
 

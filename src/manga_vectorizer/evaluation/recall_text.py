@@ -12,7 +12,7 @@ Workflow:
     4. Search FAISS text index with the embedding
 
 Usage:
-    python -m evaluate.recall_text --index final_dataset_text_embeddings/faiss_index \
+    python -m manga_vectorizer.evaluation.recall_text --index final_dataset_text_embeddings/faiss_index \
         --queries queries --output results/recall_text
 """
 
@@ -29,8 +29,8 @@ from PIL import Image
 import torch
 import open_clip
 
-# Import utility functions (handles sys.path setup)
-from evaluate.recall_utils import (
+# Import utility functions
+from manga_vectorizer.evaluation.utils import (
     get_device,
     check_faiss_available,
     load_faiss_index,
@@ -53,7 +53,7 @@ from evaluate.recall_utils import (
 )
 
 # Import LLM encoder for description generation
-from late_fusion.llm_encoder import encode_query_llm
+from manga_vectorizer.core.llm_encoder import encode_query_llm
 
 # Import faiss for type hints
 try:
@@ -92,7 +92,7 @@ def load_clip_model(model_name: str = "ViT-L-14", pretrained: str = "laion2b_s32
         
         print(f"Loaded CLIP model: {model_name} ({pretrained}) on {device}")
         return model, tokenizer, device
-        
+
     except Exception as e:
         if device != "cpu":
             print(f"Error loading CLIP model on {device}: {e}")

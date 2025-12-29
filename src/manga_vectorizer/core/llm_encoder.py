@@ -18,8 +18,8 @@ load_dotenv()
 # Model configuration
 MODEL = "claude-sonnet-4-5-20250929"
 
-# Path to the base prompt
-PROMPT_PATH = Path(__file__).parent.parent / "LLM-Claude" / "prompts" / "basic_prompt.txt"
+# Path to the base prompt (relative to project root)
+PROMPT_PATH = Path(__file__).parent.parent.parent.parent / "prompts" / "basic_prompt.txt"
 
 
 def load_base_prompt() -> str:
