@@ -10,6 +10,12 @@ Manga Vectorizer enables semantic search for manga characters by combining:
 - **FAISS indexing** for efficient similarity search
 - **Advanced retrieval methods**: Late Fusion and QCFR (two-pass retrieval with Rocchio-style query refinement)
 
+## Paper/Report
+
+For detailed information about the methodology, experiments, and results, see the full report:
+
+📄 **[Character Retrieval in Manga via Semantic Query Refinement](report/Character%20Retrieval%20in%20Manga%20via%20Semantic%20Query%20Refinemen.pdf)**
+
 ## Features
 
 - 🖼️ **Multi-modal retrieval**: Image + text hybrid search
