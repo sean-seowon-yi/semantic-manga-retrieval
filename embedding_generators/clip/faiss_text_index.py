@@ -6,9 +6,9 @@ Build and search FAISS index from CLIP text embeddings.
 Maps text results to corresponding images and deduplicates by page.
 
 Usage:
-    python legacy/clip/faiss_text_index.py final_dataset_text_embeddings
-    python legacy/clip/faiss_text_index.py --search final_dataset_text_embeddings/faiss_index --query "tall warrior" --image-dir final_dataset
-    python legacy/clip/faiss_text_index.py --search final_dataset_text_embeddings/faiss_index --query "tall warrior" -k 100 --visualize
+    python embedding_generators/clip/faiss_text_index.py final_dataset_text_embeddings
+    python embedding_generators/clip/faiss_text_index.py --search final_dataset_text_embeddings/faiss_index --query "tall warrior" --image-dir final_dataset
+    python embedding_generators/clip/faiss_text_index.py --search final_dataset_text_embeddings/faiss_index --query "tall warrior" -k 100 --visualize
 """
 
 import argparse

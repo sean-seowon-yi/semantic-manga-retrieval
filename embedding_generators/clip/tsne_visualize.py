@@ -5,9 +5,9 @@ t-SNE Visualization for FAISS Index
 Visualize the embedding space of indexed manga panels using t-SNE.
 
 Usage:
-    python legacy/clip/tsne_visualize.py --index-dir datasets/small/faiss_index
-    python legacy/clip/tsne_visualize.py --index-dir datasets/small/faiss_index --color-by author
-    python legacy/clip/tsne_visualize.py --index-dir datasets/small/faiss_index --with-thumbnails
+    python embedding_generators/clip/tsne_visualize.py --index-dir datasets/small/faiss_index
+    python embedding_generators/clip/tsne_visualize.py --index-dir datasets/small/faiss_index --color-by author
+    python embedding_generators/clip/tsne_visualize.py --index-dir datasets/small/faiss_index --with-thumbnails
 """
 
 import os
