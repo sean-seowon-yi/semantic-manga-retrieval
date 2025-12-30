@@ -6,9 +6,9 @@ Generates CLIP text embeddings from text files.
 Each line in a text file becomes a separate embedding.
 
 Usage:
-    python legacy/clip/text_embeddings.py final_dataset_text
-    python legacy/clip/text_embeddings.py final_dataset_text --output-dir custom_embeddings
-    python legacy/clip/text_embeddings.py final_dataset_text --batch-size 64
+    python embedding_generators/clip/text_embeddings.py final_dataset_text
+    python embedding_generators/clip/text_embeddings.py final_dataset_text --output-dir custom_embeddings
+    python embedding_generators/clip/text_embeddings.py final_dataset_text --batch-size 64
 """
 
 import argparse
