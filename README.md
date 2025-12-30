@@ -105,7 +105,7 @@ manga-vectorizer/
 
 Organize your manga images in the following structure:
 ```
-final_dataset/
+dataset/
 ├── manga_name/
 │   └── chapter_XX/
 │       ├── page_001.jpg
@@ -113,23 +113,75 @@ final_dataset/
 │       └── ...
 ```
 
-### 2. Generate Embeddings
+### 2. Generate Text Descriptions (Optional but Recommended)
+
+Use Claude LLM to generate detailed text descriptions for each manga page. This enhances retrieval quality by providing rich semantic descriptions.
+
+```bash
+# Use a prompt file
+python embedding_generators/llm_claude/llm_setup.py dataset \
+    -p prompts/basic_prompt.txt
+
+# Resume interrupted processing (skips existing files)
+python embedding_generators/llm_claude/llm_setup.py dataset \
+    -p prompts/basic_prompt.txt --resume
+
+# Test with a small subset first
+python embedding_generators/llm_claude/llm_setup.py dataset \
+    -p prompts/basic_prompt.txt --limit 10 --verbose
+```
+
+This creates a `dataset_text/` directory with `.txt` files corresponding to each image, preserving the directory structure:
+```
+dataset_text/
+├── manga_name/
+│   └── chapter_XX/
+│       ├── page_001.txt
+│       ├── page_002.txt
+│       └── ...
+```
+
+**Note:** This step requires an `ANTHROPIC_API_KEY` in your `.env` file and may incur API costs. The script provides detailed token usage and cost estimates.
+
+### 3. Generate Embeddings
 
 #### Image Embeddings
 ```bash
 python embedding_generators/clip/image_embeddings.py \
-    --input final_dataset \
+    --input dataset \
     --output dataset_embeddings
 ```
 
-#### Text Embeddings (from extracted text)
+#### Text Embeddings (from LLM-generated descriptions)
+
+Generate CLIP text embeddings from the text descriptions created in step 2:
+
 ```bash
-python embedding_generators/clip/text_embeddings.py \
-    --input final_dataset_text \
-    --output dataset_text_embeddings
+# Generate embeddings from text descriptions
+python embedding_generators/clip/text_embeddings.py dataset_text \
+    --output-dir dataset_text_embeddings
+
+# With custom batch size for faster processing
+python embedding_generators/clip/text_embeddings.py dataset_text \
+    --output-dir dataset_text_embeddings \
+    --batch-size 128
 ```
 
-### 3. Build FAISS Indexes
+This creates embeddings for each line in each text file. The output structure mirrors the input:
+```
+dataset_text_embeddings/
+├── manga_name/
+│   └── chapter_XX/
+│       ├── page_001_line_0.npy
+│       ├── page_001_line_1.npy
+│       └── ...
+├── all_embeddings.npy          # Combined embeddings
+└── metadata.json                # Metadata and token analysis
+```
+
+**Note:** CLIP has a token limit of 77 tokens per text. The script will warn you if any descriptions are truncated.
+
+### 4. Build FAISS Indexes
 
 ```bash
 python embedding_generators/clip/faiss_image_index.py \
@@ -141,56 +193,85 @@ python embedding_generators/clip/faiss_text_index.py \
     --output dataset_text_embeddings/faiss_index
 ```
 
-### 4. Run Evaluation
+### 5. Run Evaluation
+
+```bash
+cd src
+```
 
 #### QCFR (Query-Conditioned Feedback Retrieval)
 
 **Single run:**
 ```bash
 python -m manga_vectorizer.evaluation.recall_qcfr \
-    --queries queries \
-    --alpha 0.8 --m-img 200 --l-pos 20 --b 0.35 --c 0.3 \
-    --image-index dataset_embeddings/faiss_index \
-    --text-index dataset_text_embeddings/faiss_index \
+    --queries ../queries \
+    --alpha 0.8 --m-img 100 --l-pos 20 --b 0.35 --c 0.3 \
+    --image-index ../dataset_embeddings/faiss_index \
+    --text-index ../dataset_text_embeddings/faiss_index \
     --output results/qcfr
 ```
 
 **Grid search:**
 ```bash
 python -m manga_vectorizer.evaluation.recall_qcfr \
-    --queries queries \
+    --queries ../queries \
     --alphas 0.3 0.5 0.8 \
     --m-imgs 100 200 300 \
     --l-pos-values 20 30 50 \
     --bs 0.2 0.35 0.5 \
     --cs 0.1 0.2 0.3 \
-    --image-index dataset_embeddings/faiss_index \
-    --text-index dataset_text_embeddings/faiss_index \
+    --image-index ../dataset_embeddings/faiss_index \
+    --text-index ../dataset_text_embeddings/faiss_index \
     --output results/qcfr_grid
 ```
 
-#### Late Fusion
+#### Late Fusion (Image First)
 
 **Single run:**
 ```bash
 python -m manga_vectorizer.evaluation.recall_fusion \
-    --queries queries \
+    --queries ../queries \
     --mode image \
-    --alpha 0.5 --m 100 \
-    --image-index dataset_embeddings/faiss_index \
-    --text-index dataset_text_embeddings/faiss_index \
+    --alpha 0.8 --m 100 \
+    --image-index ../dataset_embeddings/faiss_index \
+    --text-index ../dataset_text_embeddings/faiss_index \
     --output results/fusion
 ```
 
 **Grid search:**
 ```bash
 python -m manga_vectorizer.evaluation.recall_fusion \
-    --queries queries \
+    --queries ../queries \
     --mode image \
     --alphas 0.1 0.3 0.5 0.7 0.9 \
-    --m-values 50 75 100 \
-    --image-index dataset_embeddings/faiss_index \
-    --text-index dataset_text_embeddings/faiss_index \
+    --m-values 50 100 150 \
+    --image-index ../dataset_embeddings/faiss_index \
+    --text-index ../dataset_text_embeddings/faiss_index \
+    --output results/fusion_grid
+```
+
+#### Late Fusion (Text First)
+
+**Single run:**
+```bash
+python -m manga_vectorizer.evaluation.recall_fusion \
+    --queries ../queries \
+    --mode text \
+    --alpha 0.8 --m 100 \
+    --image-index ../dataset_embeddings/faiss_index \
+    --text-index ../dataset_text_embeddings/faiss_index \
+    --output results/fusion
+```
+
+**Grid search:**
+```bash
+python -m manga_vectorizer.evaluation.recall_fusion \
+    --queries ../queries \
+    --mode text \
+    --alphas 0.1 0.3 0.5 0.7 0.9 \
+    --m-values 50 100 150 \
+    --image-index ../dataset_embeddings/faiss_index \
+    --text-index ../dataset_text_embeddings/faiss_index \
     --output results/fusion_grid
 ```
 
@@ -198,8 +279,8 @@ python -m manga_vectorizer.evaluation.recall_fusion \
 
 ```bash
 python -m manga_vectorizer.evaluation.recall_image \
-    --queries queries \
-    --index dataset_embeddings/faiss_index \
+    --queries ../queries \
+    --index ../dataset_embeddings/faiss_index \
     --output results/image_only
 ```
 
@@ -207,8 +288,8 @@ python -m manga_vectorizer.evaluation.recall_image \
 
 ```bash
 python -m manga_vectorizer.evaluation.recall_text \
-    --queries queries \
-    --index dataset_text_embeddings/faiss_index \
+    --queries ../queries \
+    --index ../dataset_text_embeddings/faiss_index \
     --output results/text_only
 ```
 
@@ -244,9 +325,11 @@ python -m manga_vectorizer.evaluation.recall_text \
 
 **Single-pass retrieval with reranking:**
 
-1. Retrieve top M candidates from image index
-2. For each candidate, find corresponding text embeddings
-3. Compute max-pooled text similarity per page
+**Note: mode image will search from image index first; whereas, mode text will search from text index first.**
+
+1. Retrieve top M candidates from image/text index
+2. For each candidate, find corresponding text/image embeddings
+3. Compute max-pooled text/image similarity per page
 4. Rerank using weighted combination: `score = α * s_img + (1-α) * s_txt`
 5. Return top K results
 
@@ -278,11 +361,68 @@ I want to find a manga that has a character similar to the one that appears on t
 
 **Example `labels.txt`:**
 ```
-final_dataset/Berserk/chapter_105/page_005.jpg
-final_dataset/Berserk/chapter_105/page_011.jpg
-final_dataset/Berserk/chapter_154/page_013.jpg
+dataset/Berserk/chapter_105/page_005.jpg
+dataset/Berserk/chapter_105/page_011.jpg
+dataset/Berserk/chapter_154/page_013.jpg
 ...
 ```
+
+## Query Processing Pipeline
+
+When a query is processed, the following steps occur:
+
+### 1. LLM Description Generation
+
+The system uses Claude LLM to generate a detailed character description from the query image and user text:
+
+```python
+# This happens automatically in the evaluation scripts
+from manga_vectorizer.core.llm_encoder import encode_query_llm
+
+description = encode_query_llm(
+    image_path=Path("queries/query_1/query.png"),
+    user_query="..." # check llm_encoder.py for detailed prompt
+)
+```
+
+**Process:**
+- The query image and user text are sent to Claude's vision API
+- Claude analyzes the image and generates a one-line character description
+- The description is cached in `queries/query_1/llm_description.txt` for reuse
+
+**Example output:**
+```
+A young man with spiky black hair, wearing a school uniform, with determined eyes and a confident expression
+```
+
+### 2. CLIP Embedding Generation
+
+Both the query image and LLM description are embedded using CLIP:
+
+```python
+from manga_vectorizer.core.clip_encoder import encode_image, encode_text
+
+# Image embedding (768-dimensional vector)
+image_embedding = encode_image(model, preprocess, device, query_image)
+
+# Text embedding (768-dimensional vector)  
+text_embedding = encode_text(model, tokenizer, device, description)
+```
+
+**Process:**
+- Query image → CLIP image encoder → 768-dim normalized embedding
+- LLM description → CLIP text encoder → 768-dim normalized embedding
+- Both embeddings are L2-normalized for cosine similarity search
+
+### 3. Retrieval
+
+The embeddings are used for similarity search in the FAISS indexes:
+
+- **Image embedding** searches the image index
+- **Text embedding** searches the text index
+- Results are combined using the retrieval method (QCFR, Late Fusion, etc.)
+
+**Note:** The LLM description is cached after first generation, so subsequent runs don't require API calls for the same query.
 
 ## Evaluation Metrics
 
@@ -352,8 +492,8 @@ text_emb = encode_text(model, tokenizer, device, description)
 results = qcfr_search_with_description(
     image_path=query_image,
     user_query=user_query,
-    image_db=Path("final_dataset"),
-    text_db=Path("final_dataset_text"),
+    image_db=Path("dataset"),
+    text_db=Path("dataset_text"),
     image_index_dir=Path("dataset_embeddings/faiss_index"),
     text_index_dir=Path("dataset_text_embeddings/faiss_index"),
     m_img=200,
@@ -411,10 +551,6 @@ pip install faiss-cpu  # or faiss-gpu for CUDA
 ## License
 
 MIT License
-
-## Contributing
-
-Contributions welcome! Please open an issue or submit a pull request.
 
 ## Acknowledgments
 
