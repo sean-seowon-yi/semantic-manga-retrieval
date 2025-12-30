@@ -554,8 +554,11 @@ MIT License
 
 ## Acknowledgments
 
-- **CLIP**: OpenAI's Contrastive Language-Image Pre-training
-- **FAISS**: Facebook AI Similarity Search
-- **Anthropic Claude**: LLM descriptions
-- **OpenCLIP**: Open-source CLIP implementations
+This project builds upon the following tools and frameworks:
 
+- **CLIP** – OpenAI’s Contrastive Language–Image Pre-training model  
+- **FAISS** – Facebook AI Similarity Search  
+- **OpenCLIP** – Open-source implementations of CLIP  
+- **Anthropic Claude** – Used for generating semantic descriptions  
+
+I would also like to thank **Professor Nick Koudas** for providing the foundational knowledge that supported this project, and **Frank Bai** for the inspiration and insights that motivated its direction.
